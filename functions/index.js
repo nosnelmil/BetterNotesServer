@@ -1,9 +1,3 @@
-// import logger from "firebase-functions/logger";
-// import {onObjectFinalized} from "firebase-functions/v2/storage";
-// import extractPDF from "./textExtractor/extractPDF.js";
-// import {getStorage} from "firebase-admin/storage";
-// import {initializeApp} from "firebase-admin/app";
-
 const {log} = require( "firebase-functions/logger");
 const {onObjectFinalized} = require( "firebase-functions/v2/storage");
 const {extractPDF} = require( "./textExtractor/extractPDF");
@@ -11,18 +5,26 @@ const {getStorage} = require( "firebase-admin/storage");
 const {initializeApp} = require( "firebase-admin/app");
 const {setGlobalOptions} = require("firebase-functions/v2");
 const {getFirestore} = require("firebase-admin/firestore");
+const {onDocumentDeleted} = require("firebase-functions/v2/firestore");
 
+// Init firebase function app
 initializeApp();
+
+
 setGlobalOptions({region: "asia-southeast2", cpu: "gcf_gen1"});
+
 const db = getFirestore();
+const storage = getStorage();
 /**
  * When an image is uploaded in the Storage bucket,
  * generate a thumbnail automatically using sharp.
  */
 exports.convertFileToText = onObjectFinalized(async (event) => {
-  const fileBucket = event.data.bucket; // Storage bucket containing the file.
   const filePath = event.data.name; // File path in the bucket.
-  const [userid, collectionid, documentid] = filePath.split("/");
+  const [userid, folderName, collectionid, documentid] = filePath.split("/");
+  if (folderName != "documents") return; // exit if not a new document
+
+  const fileBucket = event.data.bucket; // Storage bucket containing the file.
 
   log("userid", userid);
   log("collectionid", collectionid);
@@ -43,7 +45,6 @@ exports.convertFileToText = onObjectFinalized(async (event) => {
   if (contentType == "application/pdf") {
     text = await extractPDF(fileBuffer);
   }
-  log("Text extracted", text);
   db.collection("users").doc(userid)
       .collection("collections").doc(collectionid)
       .collection("documents").doc(documentid)
@@ -51,3 +52,27 @@ exports.convertFileToText = onObjectFinalized(async (event) => {
         content: text,
       });
 });
+
+const bucketName = "gs://better-notes-b6af7.appspot.com";
+const firestoreDocumentPath =
+  "users/{userid}/collections/{collectionid}/documents/{documentid}";
+exports.appDocumentCleanUp =
+  onDocumentDeleted(firestoreDocumentPath, (event) => {
+    const {userid, collectionid, documentid} = event.params;
+    storage.bucket(bucketName)
+        .file(`${userid}/documents/${collectionid}/${documentid}`)
+        .delete();
+  });
+
+// exports.saveOCRResult = onObjectFinalized(async (event) => {
+//   const filePath = event.data.name; // File path in the bucket.
+//   const [userid, folderName, collectionid, documentid] = filePath.split("/");
+//   if (folderName != "output") return; // exit if not a new document
+//   log("OCR result triggered", event);
+//   // const fileBucket = event.data.bucket;
+// Storage bucket containing the file.
+//   // const filePath = event.data.name; // File path in the bucket.
+
+//   // log("userid", userid);
+//   // log("collectionid", collectionid);
+// });
