@@ -25,7 +25,8 @@ module.exports.uploadTextToPinecone =
         `Calling Embedding endpoint with ${chunks.length} text chunks ...`,
     );
     // 8. Create OpenAI embeddings for documents
-    const embeddingsArrays = await new OpenAIEmbeddings({openAiApiKey: process.env.OPENAI_API_KEY}).embedDocuments(
+    const embeddingsArrays = await new OpenAIEmbeddings(
+        {openAiApiKey: process.env.OPENAI_API_KEY}).embedDocuments(
         chunks.map((chunk) => chunk.pageContent.replace(/\n/g, " ")),
     );
     log("Finished embedding documents");
