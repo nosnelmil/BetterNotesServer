@@ -49,7 +49,7 @@ module.exports.uploadTextToPinecone =
           pageContent: chunk.pageContent,
           txtPath: source,
         },
-        namespace: documentId,
+        namespace: namespace,
       };
       batch.push(vector);
       vectorIds.push(vectorId);
