@@ -49,7 +49,6 @@ module.exports.uploadTextToPinecone =
           pageContent: chunk.pageContent,
           txtPath: source,
         },
-        namespace: namespace,
       };
       batch.push(vector);
       vectorIds.push(vectorId);
@@ -59,6 +58,7 @@ module.exports.uploadTextToPinecone =
         await index.upsert({
           upsertRequest: {
             vectors: batch,
+            // namespace: namespace, // not supported in starter
           },
         });
         // Empty the batch
