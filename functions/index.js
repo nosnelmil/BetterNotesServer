@@ -57,10 +57,21 @@ exports.convertFileToText = onObjectFinalized(async (event) => {
 const bucketName = "gs://better-notes-b6af7.appspot.com";
 const firestoreDocumentPath =
   "users/{userid}/collections/{collectionid}/documents/{documentid}";
+const PINECONE_ENVIRONMENT = "gcp-starter";
+const PINECONE_INDEX = "betternotes";
 
 exports.appDocumentCleanUp =
-  onDocumentDeleted(firestoreDocumentPath, (event) => {
+  onDocumentDeleted(firestoreDocumentPath, async (event) => {
     const {userid, collectionid, documentid} = event.params;
+    const client = new PineconeClient();
+    await client.init({
+      apiKey: process.env.PINECONE_API_KEY,
+      environment: PINECONE_ENVIRONMENT,
+    });
+    const vectorIds = event.data.data().vectorIds;
+    if (vectorIds) {
+      await deleteIndexes(client, PINECONE_INDEX, collectionid, vectorIds);
+    }
     storage.bucket(bucketName)
         .file(`${userid}/documents/${collectionid}/${documentid}`)
         .delete();
@@ -68,10 +79,11 @@ exports.appDocumentCleanUp =
 
 
 const {PineconeClient} = require("@pinecone-database/pinecone");
+const {deleteIndexes} =
+  require("./pinecone/deleteIndexes");
 const {uploadTextToPinecone} = require("./pinecone/uploadTextToPinecone");
 // setup pinecone
-const PINECONE_ENVIRONMENT = "gcp-starter";
-const PINECONE_INDEX = "betternotes";
+
 
 exports.generateVectors =
   onDocumentWritten(firestoreDocumentPath, async (event) => {
