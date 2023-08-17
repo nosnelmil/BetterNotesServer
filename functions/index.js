@@ -10,9 +10,11 @@ const {extractPDF} = require( "./textExtractor/extractPDF");
 const {getStorage} = require( "firebase-admin/storage");
 const {initializeApp} = require( "firebase-admin/app");
 const {setGlobalOptions} = require("firebase-functions/v2");
+const {getFirestore} = require("firebase-admin/firestore");
 
 initializeApp();
 setGlobalOptions({region: "asia-southeast2", cpu: "gcf_gen1"});
+const db = getFirestore();
 /**
  * When an image is uploaded in the Storage bucket,
  * generate a thumbnail automatically using sharp.
@@ -20,9 +22,8 @@ setGlobalOptions({region: "asia-southeast2", cpu: "gcf_gen1"});
 exports.convertFileToText = onObjectFinalized(async (event) => {
   const fileBucket = event.data.bucket; // Storage bucket containing the file.
   const filePath = event.data.name; // File path in the bucket.
-  const fileValues = filePath.split("/");
-  const userid = fileValues[0];
-  const collectionid = fileValues[1];
+  const [userid, collectionid, documentid] = filePath.split("/");
+
   log("userid", userid);
   log("collectionid", collectionid);
   const contentType = event.data.contentType; // File content type.
@@ -43,4 +44,10 @@ exports.convertFileToText = onObjectFinalized(async (event) => {
     text = await extractPDF(fileBuffer);
   }
   log("Text extracted", text);
+  db.collection("users").doc(userid)
+      .collection("collections").doc(collectionid)
+      .collection("documents").doc(documentid)
+      .update({
+        content: text,
+      });
 });
