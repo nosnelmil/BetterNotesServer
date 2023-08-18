@@ -54,11 +54,21 @@ exports.convertFileToText = onObjectFinalized(async (event) => {
       });
 });
 
+
+/**
+ * Cleans up after an AppDocument has been deleted
+ */
 const bucketName = "gs://better-notes-b6af7.appspot.com";
 const firestoreDocumentPath =
   "users/{userid}/collections/{collectionid}/documents/{documentid}";
 const PINECONE_ENVIRONMENT = "gcp-starter";
 const PINECONE_INDEX = "betternotes";
+
+const {PineconeClient} = require("@pinecone-database/pinecone");
+const {deleteIndexes} =
+  require("./pinecone/deleteIndexes");
+const {uploadTextToPinecone} = require("./pinecone/uploadTextToPinecone");
+const {onRequest} = require("firebase-functions/v2/https");
 
 exports.appDocumentCleanUp =
   onDocumentDeleted(firestoreDocumentPath, async (event) => {
@@ -78,13 +88,10 @@ exports.appDocumentCleanUp =
   });
 
 
-const {PineconeClient} = require("@pinecone-database/pinecone");
-const {deleteIndexes} =
-  require("./pinecone/deleteIndexes");
-const {uploadTextToPinecone} = require("./pinecone/uploadTextToPinecone");
-// setup pinecone
-
-
+/**
+ * Generate vector embeddings when a new file is uploaded
+ * and after the text has been extracted into the content field
+ */
 exports.generateVectors =
   onDocumentWritten(firestoreDocumentPath, async (event) => {
     if ( !event.data.after.data() ||
@@ -120,6 +127,19 @@ exports.generateVectors =
     }
   });
 
+/**
+ * Handle a query coming from a user,
+ * get the vector embeddings in the collection
+ * and pass the query and vectors to openAI
+ */
+exports.query = onRequest({cors: true}, (req, res) => {
+  res.status(200);
+});
+
+/**
+ * Save the result from Cloud Vision OCR that is in a GS bucket to the
+ * content field of AppDocument
+ */
 // exports.saveOCRResult = onObjectFinalized(async (event) => {
 //   const filePath = event.data.name; // File path in the bucket.
 //   const [userid, folderName, collectionid, documentid] = filePath.split("/");
