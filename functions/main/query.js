@@ -8,7 +8,7 @@ const {log} = require("firebase-functions/logger");
 module.exports.query = async function(
     client,
     indexName,
-    nameSpace,
+    namespace,
     question,
 ) {
 // 3. Start query process
@@ -26,7 +26,7 @@ module.exports.query = async function(
       includeMetadata: true,
       includeValues: true,
       filters: {
-        "group": {"$eq": nameSpace},
+        "group": {"$eq": namespace},
       },
     },
   });
@@ -38,9 +38,9 @@ module.exports.query = async function(
   const llm = new OpenAI({});
   const chain = loadQAStuffChain(llm);
   // 10. Extract and concatenate page content from matched documents
-  const concatenatedPageContent = queryResponse.matches
-      .map((match) => match.metadata.pageContent)
-      .join(" ");
+  const sources = queryResponse.matches
+      .map((match) => match.metadata.pageContent);
+  const concatenatedPageContent = sources.join(" ");
   // 11. Execute the chain with input documents and question
   const result = await chain.call({
     input_documents: [new Document({pageContent: concatenatedPageContent})],
@@ -48,5 +48,8 @@ module.exports.query = async function(
   });
   // 12. Log the answer
   log(`Answer: ${result}`);
-  return result;
+  return {
+    ...result,
+    sources: sources,
+  };
 };

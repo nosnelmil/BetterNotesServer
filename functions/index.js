@@ -134,22 +134,27 @@ exports.generateVectors =
  * and pass the query and vectors to openAI
  */
 exports.query = onRequest({cors: true}, async (req, res) => {
-  const {question, collectionId} = res.body;
-  if (!question || !collectionId) {
+  const {question, collectionId} = req.body;
+  if (question == "" || !collectionId == "") {
     res.status(400).send("Invalid Request");
   }
-  const client = new PineconeClient();
-  await client.init({
-    apiKey: process.env.PINECONE_API_KEY,
-    environment: PINECONE_ENVIRONMENT,
-  });
-  const queryResult = await query(
-      client,
-      PINECONE_INDEX,
-      collectionId,
-      question);
-  log("Query Result:", queryResult);
-  res.status(200);
+  log("req body", question, collectionId);
+  try {
+    const client = new PineconeClient();
+    await client.init({
+      apiKey: process.env.PINECONE_API_KEY,
+      environment: PINECONE_ENVIRONMENT,
+    });
+    const queryResult = await query(
+        client,
+        PINECONE_INDEX,
+        collectionId,
+        question);
+    log("Query Result:", {...queryResult.sources});
+    res.status(200);
+  } catch (err) {
+    error(err);
+  }
 });
 
 /**
