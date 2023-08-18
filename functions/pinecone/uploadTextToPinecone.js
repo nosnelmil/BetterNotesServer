@@ -45,6 +45,7 @@ module.exports.uploadTextToPinecone =
         values: embeddingsArrays[idx],
         metadata: {
           ...chunk.metadata,
+          group: namespace,
           loc: JSON.stringify(chunk.metadata.loc),
           pageContent: chunk.pageContent,
           txtPath: source,

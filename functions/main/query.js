@@ -3,14 +3,16 @@ const {OpenAIEmbeddings} = require("langchain/embeddings/openai");
 const {OpenAI} = require("langchain/llms/openai");
 const {loadQAStuffChain} = require("langchain/chains");
 const {Document} = require("langchain/document");
+const {log} = require("firebase-functions/logger");
 // 2. Export the query function
 module.exports.query = async function(
     client,
     indexName,
+    nameSpace,
     question,
 ) {
 // 3. Start query process
-  console.log("Querying Pinecone vector store...");
+  log("Querying Pinecone vector store...");
   // 4. Retrieve the Pinecone index
   // eslint-disable-next-line new-cap
   const index = client.Index(indexName);
@@ -23,29 +25,28 @@ module.exports.query = async function(
       vector: queryEmbedding,
       includeMetadata: true,
       includeValues: true,
+      filters: {
+        "group": {"$eq": nameSpace},
+      },
     },
   });
   // 7. Log the number of matches
-  console.log(`Found ${queryResponse.matches.length} matches...`);
+  log(`Found ${queryResponse.matches.length} matches...`);
   // 8. Log the question being asked
-  console.log(`Asking question: ${question}...`);
-  if (queryResponse.matches.length) {
-    // 9. Create an OpenAI instance and load the QAStuffChain
-    const llm = new OpenAI({});
-    const chain = loadQAStuffChain(llm);
-    // 10. Extract and concatenate page content from matched documents
-    const concatenatedPageContent = queryResponse.matches
-        .map((match) => match.metadata.pageContent)
-        .join(" ");
-    // 11. Execute the chain with input documents and question
-    const result = await chain.call({
-      input_documents: [new Document({pageContent: concatenatedPageContent})],
-      question: question,
-    });
-    // 12. Log the answer
-    console.log(`Answer: ${result.text}`);
-  } else {
-    // 13. Log that there are no matches, so GPT-3 will not be queried
-    console.log("Since there are no matches, GPT-3 will not be queried.");
-  }
+  log(`Asking question: ${question}...`);
+  // 9. Create an OpenAI instance and load the QAStuffChain
+  const llm = new OpenAI({});
+  const chain = loadQAStuffChain(llm);
+  // 10. Extract and concatenate page content from matched documents
+  const concatenatedPageContent = queryResponse.matches
+      .map((match) => match.metadata.pageContent)
+      .join(" ");
+  // 11. Execute the chain with input documents and question
+  const result = await chain.call({
+    input_documents: [new Document({pageContent: concatenatedPageContent})],
+    question: question,
+  });
+  // 12. Log the answer
+  log(`Answer: ${result}`);
+  return result;
 };

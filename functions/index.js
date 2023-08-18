@@ -69,6 +69,7 @@ const {deleteIndexes} =
   require("./pinecone/deleteIndexes");
 const {uploadTextToPinecone} = require("./pinecone/uploadTextToPinecone");
 const {onRequest} = require("firebase-functions/v2/https");
+const {query} = require("./main/query");
 
 exports.appDocumentCleanUp =
   onDocumentDeleted(firestoreDocumentPath, async (event) => {
@@ -132,7 +133,22 @@ exports.generateVectors =
  * get the vector embeddings in the collection
  * and pass the query and vectors to openAI
  */
-exports.query = onRequest({cors: true}, (req, res) => {
+exports.query = onRequest({cors: true}, async (req, res) => {
+  const {question, collectionId} = res.body;
+  if (!question || !collectionId) {
+    res.status(400).send("Invalid Request");
+  }
+  const client = new PineconeClient();
+  await client.init({
+    apiKey: process.env.PINECONE_API_KEY,
+    environment: PINECONE_ENVIRONMENT,
+  });
+  const queryResult = await query(
+      client,
+      PINECONE_INDEX,
+      collectionId,
+      question);
+  log("Query Result:", queryResult);
   res.status(200);
 });
 
