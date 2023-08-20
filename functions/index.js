@@ -5,7 +5,7 @@ const {getStorage} = require( "firebase-admin/storage");
 const {initializeApp} = require( "firebase-admin/app");
 const {setGlobalOptions} = require("firebase-functions/v2");
 const {getFirestore} = require("firebase-admin/firestore");
-const {onDocumentDeleted, onDocumentWritten} =
+const {onDocumentDeleted, onDocumentWritten, onDocumentCreated} =
   require("firebase-functions/v2/firestore");
 
 // Init firebase function app
@@ -61,6 +61,8 @@ exports.convertFileToText = onObjectFinalized(async (event) => {
 const bucketName = "gs://better-notes-b6af7.appspot.com";
 const firestoreDocumentPath =
   "users/{userid}/collections/{collectionid}/documents/{documentid}";
+const conversationsCollectionPath =
+  "users/{userid}/collections/{collectionid}/conversations/{conversationid}";
 const PINECONE_ENVIRONMENT = "gcp-starter";
 const PINECONE_INDEX = "betternotes";
 
@@ -133,29 +135,34 @@ exports.generateVectors =
  * get the vector embeddings in the collection
  * and pass the query and vectors to openAI
  */
-exports.query = onRequest({cors: true}, async (req, res) => {
-  const {question, collectionId} = req.body;
-  if (question == "" || !collectionId == "") {
-    res.status(400).send("Invalid Request");
-  }
-  log("req body", question, collectionId);
-  try {
-    const client = new PineconeClient();
-    await client.init({
-      apiKey: process.env.PINECONE_API_KEY,
-      environment: PINECONE_ENVIRONMENT,
-    });
-    const queryResult = await query(
-        client,
-        PINECONE_INDEX,
-        collectionId,
-        question);
-    log("Query Result:", {...queryResult.sources});
-    res.status(200);
-  } catch (err) {
-    error(err);
-  }
-});
+exports.handleQuery =
+  onDocumentCreated(conversationsCollectionPath, async (event) => {
+    const {userid, collectionid, conversationid} = event.params;
+    const question = event.data.data().question;
+    log("New Document Created", question, userid, collectionid, conversationid);
+    try {
+      const client = new PineconeClient();
+      await client.init({
+        apiKey: process.env.PINECONE_API_KEY,
+        environment: PINECONE_ENVIRONMENT,
+      });
+      const queryResult = await query(
+          client,
+          PINECONE_INDEX,
+          collectionid,
+          question);
+      log("Query Result:", queryResult.sources);
+
+      db.collection("users").doc(userid)
+          .collection("collections").doc(collectionid)
+          .collection("conversations").doc(conversationid)
+          .update({
+            answer: queryResult.text,
+          });
+    } catch (err) {
+      error(err);
+    }
+  });
 
 /**
  * Save the result from Cloud Vision OCR that is in a GS bucket to the
