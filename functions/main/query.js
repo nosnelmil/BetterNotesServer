@@ -47,7 +47,6 @@ module.exports.query = async function(
     question: question,
   });
   // 12. Log the answer
-  log(`Answer: ${result}`);
   return {
     ...result,
     sources: sources,
