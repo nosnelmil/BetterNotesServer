@@ -21,7 +21,7 @@ module.exports.query = async function(
   // 6. Query Pinecone index and return top 10 matches
   const queryResponse = await index.query({
     queryRequest: {
-      topK: 10,
+      topK: 3,
       vector: queryEmbedding,
       includeMetadata: true,
       includeValues: true,
