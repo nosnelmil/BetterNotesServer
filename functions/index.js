@@ -8,7 +8,6 @@ const {getFirestore} = require("firebase-admin/firestore");
 const {onDocumentDeleted, onDocumentWritten, onDocumentCreated} =
   require("firebase-functions/v2/firestore");
 
-// Init firebase function app
 initializeApp();
 
 
@@ -36,6 +35,7 @@ exports.convertFileToText = onObjectFinalized(async (event) => {
   if (!acceptedType.has(contentType)) {
     return log("This is not a supported file type.");
   }
+  // await pdfocr(fileBucket, filePath, userid, collectionid, documentid);
 
   // Download file into memory from bucket.
   const bucket = getStorage().bucket(fileBucket);
@@ -72,6 +72,8 @@ const {deleteIndexes} =
 const {uploadTextToPinecone} = require("./pinecone/uploadTextToPinecone");
 const {onRequest} = require("firebase-functions/v2/https");
 const {query} = require("./main/query");
+const {PDFocr, pdfocr} = require("./textExtractor/pdfocr");
+const {deleteAll} = require("./pinecone/deleteAll");
 
 exports.appDocumentCleanUp =
   onDocumentDeleted(firestoreDocumentPath, async (event) => {
@@ -158,11 +160,22 @@ exports.handleQuery =
           .collection("conversations").doc(conversationid)
           .update({
             answer: queryResult.text,
+            sources: queryResult.sources,
           });
     } catch (err) {
       error(err);
     }
   });
+
+exports.deleteAllVectors = onRequest({cors: true}, async (req, res) => {
+  const client = new PineconeClient();
+  await client.init({
+    apiKey: process.env.PINECONE_API_KEY,
+    environment: PINECONE_ENVIRONMENT,
+  });
+  await deleteAll(client, PINECONE_INDEX);
+  res.status(200);
+});
 
 /**
  * Save the result from Cloud Vision OCR that is in a GS bucket to the
