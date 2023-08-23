@@ -21,11 +21,11 @@ module.exports.query = async function(
   // 6. Query Pinecone index and return top 10 matches
   const queryResponse = await index.query({
     queryRequest: {
-      topK: 3,
+      topK: 8,
       vector: queryEmbedding,
       includeMetadata: true,
       includeValues: true,
-      filters: {
+      filter: {
         "group": {"$eq": namespace},
       },
     },
@@ -38,9 +38,16 @@ module.exports.query = async function(
   const llm = new OpenAI({});
   const chain = loadQAStuffChain(llm);
   // 10. Extract and concatenate page content from matched documents
+  const querySource = queryResponse.matches.map((match) =>
+    match.metadata.pageContent);
   const sources = queryResponse.matches
-      .map((match) => match.metadata.pageContent);
-  const concatenatedPageContent = sources.join(" ");
+      .map((match) => {
+        return {
+          link: match.metadata.txtPath,
+          content: match.metadata.pageContent,
+        };
+      });
+  const concatenatedPageContent = querySource.join(" ");
   // 11. Execute the chain with input documents and question
   const result = await chain.call({
     input_documents: [new Document({pageContent: concatenatedPageContent})],
