@@ -4,7 +4,7 @@ const vision = require("@google-cloud/vision").v1;
 // Creates a client
 const client = new vision.ImageAnnotatorClient();
 
-module.exports.extractPDF = async function(
+module.exports.pdfocr = async function(
     fileBucket, filePath, userid, collectionid, documentid) {
   const gcsSourceUri = "gs://" + fileBucket + "/" + filePath;
   const inputConfig = {
