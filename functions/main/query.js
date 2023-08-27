@@ -4,12 +4,14 @@ const {OpenAI} = require("langchain/llms/openai");
 const {loadQAStuffChain} = require("langchain/chains");
 const {Document} = require("langchain/document");
 const {log} = require("firebase-functions/logger");
+const {ConversationBufferWindowMemory} = require("langchain/memory");
 // 2. Export the query function
 module.exports.query = async function(
     client,
     indexName,
     namespace,
     question,
+    chatHistoy,
 ) {
 // 3. Start query process
   log("Querying Pinecone vector store...");
@@ -34,9 +36,15 @@ module.exports.query = async function(
   log(`Found ${queryResponse.matches.length} matches...`);
   // 8. Log the question being asked
   log(`Asking question: ${question}...`);
+
+  // Create memory
+  // eslint-disable-next-line new-cap
+  // const memory = ConversationBufferWindowMemory(3);
+  // memory.save_context({"input": "hi"}, {"output": "whats up"});
+  // memory.save_context({"input": "not much you"}, {"output": "not much"});
   // 9. Create an OpenAI instance and load the QAStuffChain
   const llm = new OpenAI({});
-  const chain = loadQAStuffChain(llm);
+  const chain = loadQAStuffChain(llm );
   // 10. Extract and concatenate page content from matched documents
   const querySource = queryResponse.matches.map((match) =>
     match.metadata.pageContent);
