@@ -16,3 +16,8 @@
     <a href="https://github.com/Lebarnon/BetterNotesServer/issues">Request Feature</a>
   </p>
 </div>
+
+#
+<img src='./assets/BetterNotes-showcase.png' alt="showcase"/>
+
+View more info here: <a href="https://github.com/Lebarnon/BetterNotesApp">Frontend Repo</a>
