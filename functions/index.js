@@ -143,6 +143,12 @@ exports.handleQuery =
     const question = event.data.data().question;
     log("New Document Created", question, userid, collectionid, conversationid);
     try {
+      // Get chat history
+      // const snapshot = await db.collection("users").doc(userid)
+      //     .collection( "collections").doc(collectionid)
+      //     .get();
+      // const chatHistory = snapshot.data().chatHistory;
+      // Init pinecone
       const client = new PineconeClient();
       await client.init({
         apiKey: process.env.PINECONE_API_KEY,
@@ -152,7 +158,8 @@ exports.handleQuery =
           client,
           PINECONE_INDEX,
           collectionid,
-          question);
+          question,
+      );
       log("Query Result:", queryResult.sources);
 
       db.collection("users").doc(userid)
@@ -161,21 +168,22 @@ exports.handleQuery =
           .update({
             answer: queryResult.text,
             sources: queryResult.sources,
+            // chatHistory: queryResult.chatHistory,
           });
     } catch (err) {
       error(err);
     }
   });
 
-exports.deleteAllVectors = onRequest({cors: true}, async (req, res) => {
-  const client = new PineconeClient();
-  await client.init({
-    apiKey: process.env.PINECONE_API_KEY,
-    environment: PINECONE_ENVIRONMENT,
-  });
-  await deleteAll(client, PINECONE_INDEX);
-  res.status(200);
-});
+// exports.deleteAllVectors = onRequest({cors: true}, async (req, res) => {
+//   const client = new PineconeClient();
+//   await client.init({
+//     apiKey: process.env.PINECONE_API_KEY,
+//     environment: PINECONE_ENVIRONMENT,
+//   });
+//   await deleteAll(client, PINECONE_INDEX);
+//   res.status(200);
+// });
 
 /**
  * Save the result from Cloud Vision OCR that is in a GS bucket to the
@@ -193,3 +201,4 @@ exports.deleteAllVectors = onRequest({cors: true}, async (req, res) => {
 //   // log("userid", userid);
 //   // log("collectionid", collectionid);
 // });
+
