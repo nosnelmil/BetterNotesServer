@@ -4,7 +4,6 @@ const {OpenAI} = require("langchain/llms/openai");
 const {loadQAStuffChain} = require("langchain/chains");
 const {Document} = require("langchain/document");
 const {log} = require("firebase-functions/logger");
-const {ConversationBufferWindowMemory} = require("langchain/memory");
 // 2. Export the query function
 module.exports.query = async function(
     client,
@@ -43,8 +42,10 @@ module.exports.query = async function(
   // memory.save_context({"input": "hi"}, {"output": "whats up"});
   // memory.save_context({"input": "not much you"}, {"output": "not much"});
   // 9. Create an OpenAI instance and load the QAStuffChain
+  log("loading openai");
   const llm = new OpenAI({});
-  const chain = loadQAStuffChain(llm );
+  log("loading chain");
+  const chain = loadQAStuffChain(llm);
   // 10. Extract and concatenate page content from matched documents
   const querySource = queryResponse.matches.map((match) =>
     match.metadata.pageContent);
@@ -57,6 +58,7 @@ module.exports.query = async function(
       });
   const concatenatedPageContent = querySource.join(" ");
   // 11. Execute the chain with input documents and question
+  log("calling chain");
   const result = await chain.call({
     input_documents: [new Document({pageContent: concatenatedPageContent})],
     question: question,

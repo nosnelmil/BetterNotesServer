@@ -70,10 +70,7 @@ const {PineconeClient} = require("@pinecone-database/pinecone");
 const {deleteIndexes} =
   require("./pinecone/deleteIndexes");
 const {uploadTextToPinecone} = require("./pinecone/uploadTextToPinecone");
-const {onRequest} = require("firebase-functions/v2/https");
 const {query} = require("./main/query");
-const {PDFocr, pdfocr} = require("./textExtractor/pdfocr");
-const {deleteAll} = require("./pinecone/deleteAll");
 
 exports.appDocumentCleanUp =
   onDocumentDeleted(firestoreDocumentPath, async (event) => {
